@@ -12,12 +12,6 @@ chessboard_col = 6
 class camera:
     undistorted = False
     poseEstimated = False
-    mtx = 0
-    dist = 0
-    rotationVector = 0
-    rotationMatrix = 0
-    RTmatrix = 0
-    tvecs = 0
 
     def __init__(self, id):
         self.camera_number = str(id)
