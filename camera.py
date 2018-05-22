@@ -128,6 +128,7 @@ class camera:
     #argouments are as many couople of points in camera cordinate and projection matrix
     #as we can(at least 2).
     # findPoint([projeciton1, point1], [pojection2, point2]...)
+    @staticmethod
     def findPoint(*arg):
         #pseudoinvesa delle projection matrix(P)
         #concatenate per colonne(incolonnate)
@@ -137,27 +138,22 @@ class camera:
         if n_points<2:
             print("Numero di punti insufficiente")
             return False
-        if chechArgument(arg[0]):
-            return False
+        if shape(arg[0][0])!= (3,4) OR shape(arg[0][1]) != (2,1):#projection matrix must be (3x4)
+            print("Bad argument")
+            return False 
         A = arg[0][0]
         x = arg[0][1]
         for i in (1:n_points-1):
-            if chechArgument(arg[i]):
+            if shape(arg[i][0])!= (3,4) OR shape(arg[i][1]) != (2,1):#projection matrix must be (3x4)
+                print("Bad argument")
                 return False
             A = vstack(A, arg[i][0])
             app = vstack(arg[i][1], 1)#scrivo in cordinate omogenee, passo da (x,y) a (x,y,1)
             x = vstack(x, app)
         A_psin = np.linalg.pinv(A)
-        X = np.dot(A_psin, x)
-        return X
-
-
-    def chechArgument(arg):
-        if shape(arg[0])!= (3,4) OR shape(arg[1]) != (2,1):#projection matrix must be (3x4)
-            print("Bad argument")
-            return False
-        return True
-
+        X_3d = np.dot(A_psin, x)
+        return X_3d
+    
 
 
     #non lo uso più
