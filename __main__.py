@@ -1,7 +1,11 @@
 import camera as cam
 import 3dplot
+import HSVObjTracking as HSVTr
 
 def main():
+    ##red ball
+    ballLower = (137, 88, 55)
+    ballUpper = (183, 255, 255)
     camera1 = cam.camera(1, "/dev/video0")
     camera2 = cam.camera(2, "/dev/video3")
     if camera1.createCameraMatrixUndistort() == False:
@@ -10,8 +14,19 @@ def main():
         return False
     camera1.showvideo()
     camera2.showvideo()
-    x,y,z = camera1.TriangulateBallVideo(camera2, False)
+    trackingObject = HSVtr.HSVObjTracking(ballLower, ballUpper, camera1, camera2)
+    x,y,z = trackingObject.threedMovementsRecontstruction()
     3dplot.displayanimation(x, y, z)
 
 if __name__ == "__main__":
     main()
+   
+
+###yellow ball
+#ballLower = (14, 67, 34)
+#ballUpper = (57, 255, 255)
+#
+######red ball
+#ballLower = (137, 88, 55)
+#ballUpper = (183, 255, 255)
+
