@@ -201,144 +201,43 @@ class camera:
         self.projectionMatrix = np.matmul(self.mtx, self.RTmatrix)
 
 
-    """
-    #function that estimate the position of a point in the space.
-    #argouments are as many couople of points in camera cordinate and projection matrix
-    #as we can(at least 2).
-    # findPoint([projeciton1, point1], [pojection2, point2]...)
-    """
-    def findPoint(camera, *arg):
-        #projectionmatrix = Pi
-        #points in camera cordinates xi
-        # xi.shape = (3*1)
-        #    (P1)          (x1)
-        # P =(P2)     x  = (x2)
-        #     ..             ..
-        #P+ = pseudoinvers(P)
-        # X = p+*x
-        # X.shape = (4, 1)
-        #pseudoinvers of projection matrix(P)
-        #concatenate colomn
-        #X = P*x
-        #con x insieme dei punti in cordinate di camer corrispondenti
-        n_points = len(arg)
-        if n_points<2:
-            print("Numero di punti insufficiente")
-            return False
-        if arg[0][0].shape != (3,4) or arg[0][1].shape != (2,1):#projection matrix must be (3x4)
+"""
+#function that estimate the position of a point in the space.
+#argouments are as many couople of points in camera cordinate and projection matrix
+#as we can(at least 2).
+# findPoint([projeciton1, point1], [pojection2, point2]...)
+"""
+def findPoint(arg):
+    #projectionmatrix = Pi
+    #points in camera cordinates xi
+    # xi.shape = (3*1)
+    #    (P1)          (x1)
+    # P =(P2)     x  = (x2)
+    #     ..             ..
+    #P+ = pseudoinvers(P)
+    # X = p+*x
+    # X.shape = (4, 1)
+    #pseudoinvers of projection matrix(P)
+    #concatenate colomn
+    #X = P*x
+    #con x insieme dei punti in cordinate di camer corrispondenti
+    n_points = len(arg)
+    if n_points<2:
+        print("Numero di punti insufficiente")
+        return False
+    if arg[0][0].shape != (3,4) or arg[0][1].shape != (2,1):#projection matrix must be (3x4)
+        print("Bad argument")
+        return False
+    A = arg[0][0]
+    x =  np.vstack((arg[0][1],1))
+    for i in range(1,n_points-1):
+        if arg[i][0].shape != (3,4) or arg[i][1].shape != (2,1):#projection matrix must be (3x4)
             print("Bad argument")
             return False
-        A = arg[0][0]
-        x =  np.vstack((arg[0][1],1))
-        for i in range(1,n_points-1):
-            if arg[i][0].shape != (3,4) or arg[i][1].shape != (2,1):#projection matrix must be (3x4)
-                print("Bad argument")
-                return False
-            A = np.vstack((A, arg[i][0]))
-            app = np.vstack((x, arg[i][1], 1))#scrivo in cordinate omogenee, passo da (x,y) a (x,y,1)
-        A_psin = np.linalg.pinv(A)
-        X_3d = np.dot(A_psin, x)
-        return X_3d
-
-    def TriangulateBallVideo(camera1, camera2):
-        buffersize = 32
-        video = False
-        pts = collections.deque(maxlen = buffersize)
-        if camera1.undistorted == False:
-            return False
-        if camera2.undistorted == False:
-            return False
-        cap1 = cv2.VideoCapture(camera1.device)
-        cap2 = cv2.VideoCapture(camera2.device)
-        if video:
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            out = cv2.VideoWriter('output_rimbalzo.avi',fourcc, 20.0, (int(cap1.get(3)), int(cap1.get(4))))
-        pose = False
-        fig = plt.figure()
-        ax = plt.axes(projection='3d')
-        xvector = np.array([])
-        yvector = np.array([])
-        zvector = np.array([])
-        time.sleep(2.0)
-        for i in range(1, 500):
-            #with the first frame we try to find camera pose
-            ret, frame1 = cap1.read()
-            frame = frame1.copy()
-            if ret == False:
-                break
-            ret, frame2 = cap2.read()
-            if ret == False:
-                break
-            if pose == False:
-                if camera1.poseEstimate(frame1) == False or camera2.poseEstimate(frame2) == False:
-                    print("Impossibile trovare la posizione della palla nello spazio -> fallito calcolo posa")
-                    return False
-                pose = True
-            center1, centreTuple = camera1.findcenter(frame1)
-            center2,_ = camera2.findcenter(frame2)
-            if center1 is None or center2 is None:
-                continue
-            pts.appendleft(centreTuple)
-            # loop over the set of tracked points
-            for i in range(1, len(pts)):
-                #if either of the tracked points are None, ignore
-                # them
-                if pts[i - 1] is None or pts[i] is None:
-                    continue
-
-                # otherwise, compute the thickness of the line and
-                # draw the connecting lines
-                thickness = int(np.sqrt(buffersize / float(i + 1)) * 2.5)
-                cv2.line(frame, pts[i - 1], pts[i], (0, 0, 255), thickness)
-
-            # show the frame to our screen
-            cv2.imshow("Frame", frame)
-            if video:
-                out.write(frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-            x3d = camera1.findPoint([camera1.projectionMatrix, center1], [camera2.projectionMatrix, center2])
-            xvector = np.append(xvector, [x3d[0]])
-            yvector = np.append(yvector, [x3d[1]])
-            zvector = np.append(zvector, [x3d[2]])
-        cap1.release()
-        if video:
-            out.release()
-        cap2.release()
-        cv2.destroyAllWindows()
-        ax.plot3D(xvector, yvector, zvector, 'gray')
-        return(xvector, yvector, zvector)
+        A = np.vstack((A, arg[i][0]))
+        app = np.vstack((x, arg[i][1], 1))#scrivo in cordinate omogenee, passo da (x,y) a (x,y,1)
+    A_psin = np.linalg.pinv(A)
+    X_3d = np.dot(A_psin, x)
+    return X_3d
 
 
-
-    def findcenter(camera1, image):
-        ballLower = (137, 88, 55)
-        ballUpper = (183, 255, 255)
-        blurred = cv2.GaussianBlur(image,(5,5),0)
-        hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-        #sottraggo dallo sfondo il colore(nel mio caso giallo)
-        mask = cv2.inRange(hsv, ballLower, ballUpper)
-        #con erode e dilate elimno rumore
-        mask = cv2.erode(mask, None, iterations=2)
-        mask = cv2.dilate(mask, None, iterations=2)
-        im2, cnts, hierarchy = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-        center = None
-        tuple = None
-        if len(cnts) > 0:
-            # find the largest contour in the mask, then use
-            #to find the center
-            c = max(cnts, key=cv2.contourArea)
-            ((x, y), radius) = cv2.minEnclosingCircle(c)
-            M = cv2.moments(c)
-            center = np.matrix([[int(M["m10"] / M["m00"])],[int(M["m01"] / M["m00"])]])
-            tuple = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-        return center, tuple
-
-
-###yellow ball
-#ballLower = (14, 67, 34)
-#ballUpper = (57, 255, 255)
-#
-######red ball
-#ballLower = (137, 88, 55)
-#ballUpper = (183, 255, 255)
