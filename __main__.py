@@ -1,9 +1,13 @@
+import threeDplot
 import camera as cam
-import 3dplot
 import HSVObjTracking as HSVTr
+import numpy as np
+import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.axes3d as p3
+import matplotlib.animation as animation
 
 def main():
-    ##red ball
+    ######red ball
     ballLower = (137, 88, 55)
     ballUpper = (183, 255, 255)
     camera1 = cam.camera(1, "/dev/video0")
@@ -14,13 +18,13 @@ def main():
         return False
     camera1.showvideo()
     camera2.showvideo()
-    trackingObject = HSVtr.HSVObjTracking(ballLower, ballUpper, camera1, camera2)
+    trackingObject = HSVTr.HSVObjTracking(ballLower, ballUpper, [camera1, camera2])
     x,y,z = trackingObject.threedMovementsRecontstruction()
-    3dplot.displayanimation(x, y, z)
+    threeDplot.displayanimation(x, y, z)
 
 if __name__ == "__main__":
     main()
-   
+
 
 ###yellow ball
 #ballLower = (14, 67, 34)
@@ -29,4 +33,3 @@ if __name__ == "__main__":
 ######red ball
 #ballLower = (137, 88, 55)
 #ballUpper = (183, 255, 255)
-

@@ -16,8 +16,8 @@ import time
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 #chessboard dimention
-chessboard_row = 6
-chessboard_col = 9
+chessboard_row = 4
+chessboard_col = 5
 
 
 
@@ -26,9 +26,9 @@ class camera:
     undistorted = False
     poseEstimated = False
 
-    def __init__(self, id, name):
+    def __init__(self, id, url):
         self.camera_number = str(id)
-        self.device = name
+        self.url = url
 
     """
     Function that recover camera intrinsic parameters and camera Distortion Coefficient.
@@ -38,7 +38,7 @@ class camera:
     """
     def createCameraMatrixUndistort(self):
         if self.loadCoefficient():
-            return true
+            return True
         # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
         objp = np.zeros((chessboard_row * chessboard_col, 3), np.float32)
         objp[:, :2] = np.mgrid[0:chessboard_row, 0:chessboard_col].T.reshape(-1, 2)
@@ -58,23 +58,25 @@ class camera:
 
             # If found, add object points, image points (after refining them)
             if ret == True:
+                #more accuracy for the corner coordinate
                 corners = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
                 objpoints.append(objp)
 
                 #cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
                 imgpoints.append(corners)
                 # Draw and display the corners
-                cv2.drawChessboardCorners(img, (9,6), corners, True)
-                cv2.imshow('img',img)
-                cv2.waitKey(1) & 0xff
-        cv2.destroyAllWindows()
 
         ret, self.mtx, self.dist, _, _ = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
         if ret == False:
             print("Error, camera images not present for camera number "+camera2.camera_number)
             return False
-        #save in file
+
+        #create map for undistortion
+        h, w = img.shape[:2]
+        self.newcameramtx, self.roi = cv2.getOptimalNewCameraMatrix(self.mtx,self.dist,(w,h),1,(w,h))
+        self.mapx, self.mapy = cv2.initUndistortRectifyMap(self.mtx,self.dist,None,self.newcameramtx,(w,h),5)
         self.undistorted = True
+        #save file
         self.saveFile()
         return True
 
@@ -82,40 +84,58 @@ class camera:
         if self.undistorted == False:
             return False
         else:
-            pickle.dump( [self.mtx, self.dist], open( "cameraCoefficient_"
-                                                    + self.camera_number + ".p", "wb" ) )
+            pickle.dump( [self.mtx, self.dist, self.mapx, self.mapy, self.newcameramtx, self.roi],
+            open( "cameraCoefficient_"+ self.camera_number + ".p", "wb" ) )
 
     def loadCoefficient(self):
         if self.undistorted == True:
             return(True)
         try:
             with open("cameraCoefficient_" + self.camera_number + ".p", "rb") as f:
-                self.mtx, self.dist = pickle.load(f)
+                [self.mtx, self.dist, self.mapx, self.mapy, self.newcameramtx, self.roi] = pickle.load(f)
             self.undistorted = True
             return(True)
         except:
             return(False)
 
+    def undistortPoint(self, point):
+        fx = self.mtx[0][0]
+        fy = self.mtx[1][1]
+        cx = self.mtx[0][2]
+        cy = self.mtx[1][2]
+        point = cv2.undistortPoints(test, cam1.mtx, cam1.dist)
+        for p in point:
+            p[0][0] = p[0][0]*fx + cx
+            p[0][1] = p[0][1]*fy + cy
+        return point
 
-    def undistort_frame(self, img):
+    """
+    function that undistort frame using the map we have created.
+    the bool variable crop is set to true, it indicate if we want to crop the original img
+    in order to delete black border created by undistortion.
+    It should set to False if we want to maintain the coordinate in pixel.
+    """
+    def undistortFrame(self, img, crop = True):
         if self.undistorted == True:
-            h,  w = img.shape[:2]
-            newcameramtx, roi = cv2.getOptimalNewCameraMatrix(self.mtx,self.dist,(w,h),1,(w,h))
-            undistorted_img = cv2.undistort(img, self.mtx, self.dist, None, newcameramtx)
-            x,y,w,h = roi
-            undistorted_img = undistorted_img[y:y+h, x:x+w]
-            return(undistorted_img)
+            undistorted = cv2.remap(img,self.mapx,self.mapy,cv2.INTER_LINEAR)
+            if crop:
+                x,y,w,h = sel.roi
+                undistorted = undistorted[y:y+h, x:x+w]
+            return(undistorted)
         return False
+    #1newcameramtx
+    #2initUndistortRectifyMap
+    #applico mappa su due assi (map1, map2)
 
     def showvideo(self):
         if self.undistorted == False:
             return False
-        cap = cv2.VideoCapture(self.device)
+        cap = cv2.VideoCapture(self.url)
         while(True):
             # Capture frame-by-frame
             ret, frame = cap.read()
             if ret == False:
-                print("Error: camera "+self.camera_number+" is no attached to "+self.device)
+                print("Error: camera "+self.camera_number+" is no attached to "+self.url)
                 break
             frame = self.undistort_frame(frame)
             # Display the resulting frame
@@ -127,6 +147,7 @@ class camera:
 
 
     def checkrotation(self, corners, photo):
+        """
         #black and white photo
         #CONTROLLO RAPPRESENTAZIONE DEI PUNTI
         #passo il vettore dei corner -> il primo elemento è il coner in basso a sinistra il [n_row + 1] è quello
@@ -139,6 +160,7 @@ class camera:
         #
         #the first square is black then the chessboard is straight->return False
         #is white then it's rotated -> return true
+        """
         lowermedium = (corners[0] + corners[chessboard_row + 1])/2
         uppermedium = (corners[(chessboard_row)*(chessboard_col-1)-2] + corners[chessboard_row*chessboard_col - 1])/2
         lowermedium = lowermedium.astype(int)
@@ -201,6 +223,8 @@ class camera:
         self.projectionMatrix = np.matmul(self.mtx, self.RTmatrix)
 
 
+
+
 """
 #function that estimate the position of a point in the space.
 #argouments are as many couople of points in camera cordinate and projection matrix
@@ -223,7 +247,7 @@ def findPoint(arg):
     #con x insieme dei punti in cordinate di camer corrispondenti
     n_points = len(arg)
     if n_points<2:
-        print("Numero di punti insufficiente")
+        print("Insufficient number of points")
         return False
     if arg[0][0].shape != (3,4) or arg[0][1].shape != (2,1):#projection matrix must be (3x4)
         print("Bad argument")
@@ -239,5 +263,3 @@ def findPoint(arg):
     A_psin = np.linalg.pinv(A)
     X_3d = np.dot(A_psin, x)
     return X_3d
-
-
