@@ -5,6 +5,10 @@ It's all documented on the [thesis.pdf](https://github.com/MarioBonse/multicamer
 Some result can be seen on this animations.
 The first one is the ball bounce.
 This is the video captured by one of the two cameras:
-[!](https://github.com/MarioBonse/multicamera3DMotionReconstruction/blob/master/Experiment2Video.gif)
+![](https://github.com/MarioBonse/multicamera3DMotionReconstruction/blob/master/Experiment2Video.gif)
 This is the result of the reconstruction
-[!](https://github.com/MarioBonse/multicamera3DMotionReconstruction/blob/master/Experiment2.gif)
+![](https://github.com/MarioBonse/multicamera3DMotionReconstruction/blob/master/Experiment2.gif)
+This is me triing to work better with depth:
+![](https://github.com/MarioBonse/multicamera3DMotionReconstruction/blob/master/experiment1Video.gif)
+This is the 3d reconstruction:
+![](https://github.com/MarioBonse/multicamera3DMotionReconstruction/blob/master/Experiment1.gif)
